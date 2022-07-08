@@ -32,6 +32,11 @@ struct Shader {
 		glUseProgram(program);
 	}
 
+	void load_int(const char *name, int value) {
+		GLint loc = get_uniform_location(name);
+		glUniform1i(loc, value);
+	}
+
 	void load_float(const char *name, float value) {
 		GLint loc = get_uniform_location(name);
 		glUniform1f(loc, value);
@@ -139,46 +144,47 @@ struct PositionalLight {
 	}
 };
 
-struct Texture {
-	GLuint id;
+typedef GLuint Texture;
 
-	Texture(const char *path) {
-		int w, h;
+Texture load_texture(const char *path) {
+	Texture id;
+	int w, h;
 
-		stbi_set_flip_vertically_on_load(true);
-		unsigned char *image = stbi_load(path, &w, &h, 0, STBI_rgb_alpha);
+	stbi_set_flip_vertically_on_load(true);
+	unsigned char *image = stbi_load(path, &w, &h, 0, STBI_rgb_alpha);
 
-		if (!image) {
-			std::cout << "Failed to load texture '" << path << "'!\n";
-			std::exit(EXIT_FAILURE);
-		}
-
-		glGenTextures(1, &id);
-		glBindTexture(GL_TEXTURE_2D, id);
-
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
-		glGenerateMipmap(GL_TEXTURE_2D);
-
-		if (glewIsSupported("GL_EXT_texture_filter_anisotropic")) {
-			GLfloat anisoSetting = 0.0f;
-			glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &anisoSetting);
-			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, anisoSetting);
-		}
-
-		glBindTexture(GL_TEXTURE_2D, 0);
-
-		stbi_image_free(image);
+	if (!image) {
+		std::cout << "Failed to load texture '" << path << "'!\n";
+		std::exit(EXIT_FAILURE);
 	}
 
-	void bind() {
-		glBindTexture(GL_TEXTURE_2D, id);
+	glGenTextures(1, &id);
+	glBindTexture(GL_TEXTURE_2D, id);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
+	glGenerateMipmap(GL_TEXTURE_2D);
+
+	if (glewIsSupported("GL_EXT_texture_filter_anisotropic")) {
+		GLfloat anisoSetting = 0.0f;
+		glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &anisoSetting);
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, anisoSetting);
 	}
-};
+
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	stbi_image_free(image);
+
+	return id;
+}
+
+void bind_texture(Texture id) {
+	glBindTexture(GL_TEXTURE_2D, id);
+}
 
 struct Model {
 	GLuint vao;

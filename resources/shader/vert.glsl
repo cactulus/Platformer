@@ -12,7 +12,7 @@ uniform mat4 proj_matrix;
 uniform mat4 view_matrix;
 uniform mat4 model_matrix;
 
-const vec4 plane = vec4(0.0, -1.0, 0.0, 0.5);
+const vec4 plane = vec4(0.0, -1.0, 0.0, 0.7);
 
 void main() {
 	vec4 world_pos = model_matrix * vec4(pos, 1.0);
