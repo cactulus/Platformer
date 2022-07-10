@@ -11,6 +11,11 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/string_cast.hpp>
+
+#include <assimp/Importer.hpp>
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
@@ -19,6 +24,7 @@
 
 #include "log.cpp"
 #include "gfx.cpp"
+#include "model.cpp"
 
 #define ID_CUBE 1
 #define ID_CRATE 2
@@ -35,7 +41,7 @@ struct Player {
 	float last_z = z;
 
 	Texture texture;
-	Model *model;
+	ComplexModel *model;
 };
 
 struct Block {
@@ -98,7 +104,7 @@ struct Water {
 	GLuint frame_buffer_texture;
 
 	Texture water_texture;
-	Model *model;
+	SimpleModel *model;
 	Shader *shader;
 };
 
@@ -122,7 +128,7 @@ struct Platformer {
 	
 	glm::mat4 proj_mat;
 	std::unordered_map<int, Texture> texture_atlas;
-	std::unordered_map<int, Model *> model_atlas;
+	std::unordered_map<int, ComplexModel *> model_atlas;
 };
 
 const int world_size_x = 32;
@@ -300,7 +306,7 @@ void init(Platformer *platformer, GLFWwindow *window) {
 	water_shader->load_int("water_texture", 1);
 	water_shader->load_int("dudv_map", 2);
 	water_shader->load_mat4("model_matrix", glm::scale(glm::mat4(1.0), glm::vec3(world_size_x, 1.0, world_size_z)));
-	platformer->water.model = new Model((float *)&water_vertices[0], 18, 0, 0, 0, 0);
+	platformer->water.model = new SimpleModel((float *)&water_vertices[0], 18);
 	platformer->water.shader = water_shader;
 	platformer->water.water_texture = load_texture("resources/textures/water_texture.png");
 	create_water_frame_buffer(platformer, &platformer->water);
@@ -311,6 +317,7 @@ void init(Platformer *platformer, GLFWwindow *window) {
 	platformer->width = fwidth;
 	platformer->height = fheight;
 	platformer->proj_mat = glm::perspective(1.0472f, (float)fwidth / (float)fheight, 0.1f, 1000.0f);
+	std::cout << glm::to_string(platformer->proj_mat) << std::endl;
 
 	glClearColor(0.53, 0.81, 0.92, 1.0);
 	
@@ -319,6 +326,11 @@ void init(Platformer *platformer, GLFWwindow *window) {
 	platformer->light->install(platformer->shader);
 
 	glEnable(GL_MULTISAMPLE);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	glEnable(GL_LINE_SMOOTH);
+	glEnable(GL_DEPTH_TEST);
 
 	load_world(platformer, "resources/worlds/world1.txt");
 }
@@ -565,7 +577,6 @@ void render_water(Platformer *platformer) {
 void render(Platformer *platformer) {
 	Water *water = &platformer->water;
 
-	glEnable(GL_DEPTH_TEST);
 	glCullFace(GL_BACK);
 	glActiveTexture(GL_TEXTURE0);
 
